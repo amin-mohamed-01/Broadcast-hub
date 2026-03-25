@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   createUserWithEmailAndPassword, 
@@ -68,6 +68,9 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
+  // Responsive detection (mobile vs tablet/desktop)
+  const [isDesktop, setIsDesktop] = useState(true);
+
   // Per-field validation errors (sign up only)
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
@@ -83,6 +86,19 @@ export default function AuthPage() {
     confirmPassword: '',
     name: ''
   });
+
+  // ── Responsive handler ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia('(min-width: 768px)'); // Tailwind md breakpoint
+    const handleChange = () => setIsDesktop(mediaQuery.matches);
+
+    handleChange(); // Initial check
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   // --- HANDLERS ---
 
@@ -199,184 +215,418 @@ export default function AuthPage() {
         </div>
       )}
 
-      {/* Main Card */}
-      <div className={`relative bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden w-[850px] max-w-[95%] min-h-[600px] transition-all duration-700 ease-in-out z-10`}>
+      {/* Main Card - Fully responsive */}
+      <div className={`relative bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden w-full max-w-[95%] md:max-w-[850px] min-h-[520px] md:min-h-[600px] transition-all duration-700 ease-in-out z-10`}>
         
-        {/* Sign Up Form Container */}
-        <div className="absolute top-0 h-full transition-all duration-700 ease-in-out left-0 w-1/2" style={{ 
-          transform: isSignUpMode ? 'translateX(100%)' : 'translateX(20%)',
-          opacity: isSignUpMode ? 1 : 0,
-          zIndex: isSignUpMode ? 5 : 1,
-          pointerEvents: isSignUpMode ? 'all' : 'none'
-        }}>
-          <form onSubmit={handleSubmit} noValidate className="flex flex-col items-center justify-center h-full px-10 text-center overflow-y-auto py-8">
-            <h1 className="text-3xl font-bold text-white mb-1">Create Account</h1>
-            <p className="text-slate-400 text-sm mb-5">Join us today and get started</p>
-            
-            <div className="w-full space-y-3">
-              {/* Name */}
-              <div className="text-left">
-                <input 
-                  type="text" name="name" placeholder="Full Name" 
-                  value={formData.name}
-                  className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${fieldErrors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
-                  onChange={handleInputChange} required
-                />
-                {fieldErrors.name && <p className="text-red-400 text-xs mt-1 pl-1">{fieldErrors.name}</p>}
-              </div>
+        {/* ── DESKTOP / TABLET LAYOUT (original sliding panels) ── */}
+        {isDesktop ? (
+          <>
+            {/* Sign Up Form Container */}
+            <div 
+              className="absolute top-0 h-full transition-all duration-700 ease-in-out left-0 w-1/2" 
+              style={{ 
+                transform: isSignUpMode ? 'translateX(100%)' : 'translateX(20%)',
+                opacity: isSignUpMode ? 1 : 0,
+                zIndex: isSignUpMode ? 5 : 1,
+                pointerEvents: isSignUpMode ? 'all' : 'none'
+              }}
+            >
+              <form onSubmit={handleSubmit} noValidate className="flex flex-col items-center justify-center h-full px-10 text-center overflow-y-auto py-8">
+                <h1 className="text-3xl font-bold text-white mb-1">Create Account</h1>
+                <p className="text-slate-400 text-sm mb-5">Join us today and get started</p>
+                
+                <div className="w-full space-y-3">
+                  {/* Name */}
+                  <div className="text-left">
+                    <input 
+                      type="text" 
+                      name="name" 
+                      placeholder="Full Name" 
+                      value={formData.name}
+                      className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${fieldErrors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                      onChange={handleInputChange} 
+                      required
+                    />
+                    {fieldErrors.name && <p className="text-red-400 text-xs mt-1 pl-1">{fieldErrors.name}</p>}
+                  </div>
 
-              {/* Email */}
-              <div className="text-left">
-                <input 
-                  type="email" name="email" placeholder="Email" 
-                  value={formData.email}
-                  className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
-                  onChange={handleInputChange} required
-                />
-                {fieldErrors.email && <p className="text-red-400 text-xs mt-1 pl-1">{fieldErrors.email}</p>}
-              </div>
+                  {/* Email */}
+                  <div className="text-left">
+                    <input 
+                      type="email" 
+                      name="email" 
+                      placeholder="Email" 
+                      value={formData.email}
+                      className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                      onChange={handleInputChange} 
+                      required
+                    />
+                    {fieldErrors.email && <p className="text-red-400 text-xs mt-1 pl-1">{fieldErrors.email}</p>}
+                  </div>
 
-              {/* Password */}
-              <div className="text-left">
-                <input 
-                  type="password" name="password" placeholder="Password" 
-                  value={formData.password}
-                  className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${hasPwErrors ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
-                  onChange={handleInputChange} required
-                />
-                {hasPwErrors && (
-                  <ul className="mt-1 pl-1 space-y-0.5">
-                    {Object.values(pwErrors).map((msg) => (
-                      <li key={msg} className="text-red-400 text-xs flex items-center gap-1">
-                        <span>•</span> {msg}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                  {/* Password */}
+                  <div className="text-left">
+                    <input 
+                      type="password" 
+                      name="password" 
+                      placeholder="Password" 
+                      value={formData.password}
+                      className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${hasPwErrors ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                      onChange={handleInputChange} 
+                      required
+                    />
+                    {hasPwErrors && (
+                      <ul className="mt-1 pl-1 space-y-0.5">
+                        {Object.values(pwErrors).map((msg) => (
+                          <li key={msg} className="text-red-400 text-xs flex items-center gap-1">
+                            <span>•</span> {msg}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
 
-              {/* Confirm Password */}
-              <div className="text-left">
-                <input 
-                  type="password" name="confirmPassword" placeholder="Confirm Password" 
-                  value={formData.confirmPassword}
-                  className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${fieldErrors.confirmPassword ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
-                  onChange={handleInputChange} required
-                />
-                {fieldErrors.confirmPassword && <p className="text-red-400 text-xs mt-1 pl-1">{fieldErrors.confirmPassword}</p>}
-              </div>
+                  {/* Confirm Password */}
+                  <div className="text-left">
+                    <input 
+                      type="password" 
+                      name="confirmPassword" 
+                      placeholder="Confirm Password" 
+                      value={formData.confirmPassword}
+                      className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${fieldErrors.confirmPassword ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                      onChange={handleInputChange} 
+                      required
+                    />
+                    {fieldErrors.confirmPassword && <p className="text-red-400 text-xs mt-1 pl-1">{fieldErrors.confirmPassword}</p>}
+                  </div>
+                </div>
+
+                {error && <p role="alert" className="text-red-400 text-sm mt-3 text-center">{error}</p>}
+
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="mt-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-10 rounded-lg shadow-lg shadow-indigo-500/30 transition-all transform hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {loading ? <span className="inline-block animate-spin mr-2">⟳</span> : null}
+                  {loading ? 'Creating...' : 'Sign Up'}
+                </button>
+
+                <button 
+                  type="button" 
+                  onClick={handleGoogleAuth} 
+                  disabled={loading}
+                  className="mt-3 w-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium py-3 rounded-lg transition flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                  Sign Up with Google
+                </button>
+              </form>
             </div>
 
-            {error && <p role="alert" className="text-red-400 text-sm mt-3 text-center">{error}</p>}
-
-            <button 
-              type="submit" disabled={loading}
-              className="mt-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-10 rounded-lg shadow-lg shadow-indigo-500/30 transition-all transform hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed"
+            {/* Sign In Form Container */}
+            <div 
+              className="absolute top-0 h-full transition-all duration-700 ease-in-out left-0 w-1/2" 
+              style={{
+                transform: isSignUpMode ? 'translateX(100%)' : 'translateX(0)',
+                opacity: isSignUpMode ? 0 : 1,
+                zIndex: isSignUpMode ? 1 : 5,
+                pointerEvents: isSignUpMode ? 'none' : 'all'
+              }}
             >
-              {loading ? <span className="inline-block animate-spin mr-2">⟳</span> : null}
-              {loading ? 'Creating...' : 'Sign Up'}
-            </button>
+              <form onSubmit={handleSubmit} noValidate className="flex flex-col items-center justify-center h-full px-12 text-center">
+                <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+                <p className="text-slate-400 text-sm mb-8">Sign in to continue to your account</p>
+                
+                <div className="w-full space-y-4">
+                  <input 
+                    type="email" 
+                    name="email" 
+                    placeholder="Email" 
+                    value={formData.email}
+                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                    onChange={handleInputChange} 
+                    required
+                  />
+                  <input 
+                    type="password" 
+                    name="password" 
+                    placeholder="Password" 
+                    value={formData.password}
+                    className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                    onChange={handleInputChange} 
+                    required
+                  />
+                </div>
 
-            <button 
-              type="button" onClick={handleGoogleAuth} disabled={loading}
-              className="mt-3 w-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium py-3 rounded-lg transition flex items-center justify-center gap-3 disabled:opacity-50"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
-              Sign Up with Google
-            </button>
-          </form>
-        </div>
+                <div className="w-full flex justify-end mt-2">
+                  <a href="#" className="text-xs text-indigo-400 hover:text-indigo-300 transition">Forgot Password?</a>
+                </div>
 
-        {/* Sign In Form Container */}
-        <div className="absolute top-0 h-full transition-all duration-700 ease-in-out left-0 w-1/2" style={{
-           transform: isSignUpMode ? 'translateX(100%)' : 'translateX(0)',
-           opacity: isSignUpMode ? 0 : 1,
-           zIndex: isSignUpMode ? 1 : 5,
-           pointerEvents: isSignUpMode ? 'none' : 'all'
-        }}>
-          <form onSubmit={handleSubmit} noValidate className="flex flex-col items-center justify-center h-full px-12 text-center">
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-slate-400 text-sm mb-8">Sign in to continue to your account</p>
-            
-            <div className="w-full space-y-4">
-              <input 
-                type="email" name="email" placeholder="Email" 
-                value={formData.email}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                onChange={handleInputChange} required
-              />
-              <input 
-                type="password" name="password" placeholder="Password" 
-                value={formData.password}
-                className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                onChange={handleInputChange} required
-              />
+                {error && <p role="alert" className="text-red-400 text-sm mt-3 text-center">{error}</p>}
+
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="mt-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-10 rounded-lg shadow-lg shadow-indigo-500/30 transition-all transform hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {loading ? <span className="inline-block animate-spin mr-2">⟳</span> : null}
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+
+                <button 
+                  type="button" 
+                  onClick={handleGoogleAuth} 
+                  disabled={loading}
+                  className="mt-4 w-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium py-3 rounded-lg transition flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                  Sign In with Google
+                </button>
+              </form>
             </div>
 
-            <div className="w-full flex justify-end mt-2">
-              <a href="#" className="text-xs text-indigo-400 hover:text-indigo-300 transition">Forgot Password?</a>
+            {/* Overlay Slider */}
+            <div 
+              className="absolute top-0 left-1/2 w-1/2 h-full overflow-hidden transition-transform duration-700 ease-in-out z-20" 
+              style={{
+                transform: isSignUpMode ? 'translateX(-100%)' : 'translateX(0)'
+              }}
+            >
+              <div 
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white relative -left-full h-full w-[200%] transition-transform duration-700 ease-in-out" 
+                style={{
+                  transform: isSignUpMode ? 'translateX(50%)' : 'translateX(0)'
+                }}
+              >
+                {/* Left Panel (visible when Sign Up active) */}
+                <div 
+                  className="absolute flex items-center justify-center flex-col h-full w-1/2 top-0 px-12 transition-transform duration-700 ease-in-out max-w-full" 
+                  style={{
+                    transform: isSignUpMode ? 'translateX(0)' : 'translateX(-20px)'
+                  }}
+                >
+                  <h1 className="text-3xl font-bold mb-4">Welcome Back!</h1>
+                  <p className="text-xs font-light text-indigo-100 mb-10 leading-relaxed text-center">
+                    To keep connected with us please login with your personal info
+                  </p>
+                  <button 
+                    onClick={toggleMode}
+                    className="bg-transparent border-2 border-white text-white font-bold py-3 px-10 rounded-lg hover:bg-white hover:text-indigo-600 transition-all duration-300"
+                  >
+                    Sign In
+                  </button>
+                </div>
+
+                {/* Right Panel (visible when Sign In active) */}
+                <div 
+                  className="absolute flex items-center justify-center flex-col h-full w-1/2 top-0 right-0 px-12 transition-transform duration-700 ease-in-out max-w-full" 
+                  style={{
+                    transform: isSignUpMode ? 'translateX(20px)' : 'translateX(0)'
+                  }}
+                >
+                  <h1 className="text-3xl font-bold mb-4">Hello, Friend!</h1>
+                  <p className="text-xs font-light text-indigo-100 mb-10 leading-relaxed text-center">
+                    Enter your personal details and start your journey with us
+                  </p>
+                  <button 
+                    onClick={toggleMode}
+                    className="bg-transparent border-2 border-white text-white font-bold py-3 px-10 rounded-lg hover:bg-white hover:text-indigo-600 transition-all duration-300"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              </div>
             </div>
-
-            {error && <p role="alert" className="text-red-400 text-sm mt-3 text-center">{error}</p>}
-
-            <button 
-              type="submit" disabled={loading}
-              className="mt-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-10 rounded-lg shadow-lg shadow-indigo-500/30 transition-all transform hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {loading ? <span className="inline-block animate-spin mr-2">⟳</span> : null}
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-
-            <button 
-              type="button" onClick={handleGoogleAuth} disabled={loading}
-              className="mt-4 w-full bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium py-3 rounded-lg transition flex items-center justify-center gap-3 disabled:opacity-50"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
-              Sign In with Google
-            </button>
-          </form>
-        </div>
-
-        {/* Overlay Slider */}
-        <div className="absolute top-0 left-1/2 w-1/2 h-full overflow-hidden transition-transform duration-700 ease-in-out z-20" style={{
-            transform: isSignUpMode ? 'translateX(-100%)' : 'translateX(0)'
-        }}>
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white relative -left-full h-full w-[200%] transition-transform duration-700 ease-in-out" style={{
-              transform: isSignUpMode ? 'translateX(50%)' : 'translateX(0)'
-          }}>
-            {/* Left Panel (visible when Sign Up active) */}
-            <div className="absolute flex items-center justify-center flex-col h-full w-1/2 top-0 px-12 transition-transform duration-700 ease-in-out max-w-full" style={{
-               transform: isSignUpMode ? 'translateX(0)' : 'translateX(-20px)'
-            }}>
-              <h1 className="text-3xl font-bold mb-4">Welcome Back!</h1>
-              <p className="text-xs font-light text-indigo-100 mb-10 leading-relaxed text-center">
-                To keep connected with us please login with your personal info
-              </p>
-              <button 
-                onClick={toggleMode}
-                className="bg-transparent border-2 border-white text-white font-bold py-3 px-10 rounded-lg hover:bg-white hover:text-indigo-600 transition-all duration-300"
+          </>
+        ) : (
+          /* ── MOBILE LAYOUT (clean tabs + single form) ── */
+          <div className="h-full flex flex-col">
+            {/* Tab switcher */}
+            <div className="flex border-b border-white/10 bg-white/5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUpMode(false);
+                  setError('');
+                  setFieldErrors({});
+                }}
+                className={`flex-1 py-5 text-base font-medium transition-colors ${
+                  !isSignUpMode 
+                    ? 'text-white border-b-2 border-indigo-500 bg-white/10' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
               >
                 Sign In
               </button>
-            </div>
-
-            {/* Right Panel (visible when Sign In active) */}
-            <div className="absolute flex items-center justify-center flex-col h-full w-1/2 top-0 right-0 px-12 transition-transform duration-700 ease-in-out max-w-full" style={{
-               transform: isSignUpMode ? 'translateX(20px)' : 'translateX(0)'
-            }}>
-              <h1 className="text-3xl font-bold mb-4">Hello, Friend!</h1>
-              <p className="text-xs font-light text-indigo-100 mb-10 leading-relaxed text-center">
-                Enter your personal details and start your journey with us
-              </p>
-              <button 
-                onClick={toggleMode}
-                className="bg-transparent border-2 border-white text-white font-bold py-3 px-10 rounded-lg hover:bg-white hover:text-indigo-600 transition-all duration-300"
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUpMode(true);
+                  setError('');
+                  setFieldErrors({});
+                }}
+                className={`flex-1 py-5 text-base font-medium transition-colors ${
+                  isSignUpMode 
+                    ? 'text-white border-b-2 border-indigo-500 bg-white/10' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
               >
                 Sign Up
               </button>
             </div>
+
+            {/* Form content area */}
+            <div className="flex-1 p-6 overflow-y-auto">
+              {isSignUpMode ? (
+                /* Mobile Sign Up Form */
+                <form onSubmit={handleSubmit} noValidate className="flex flex-col items-center text-center">
+                  <h1 className="text-3xl font-bold text-white mb-1">Create Account</h1>
+                  <p className="text-slate-400 text-sm mb-5">Join us today and get started</p>
+                  
+                  <div className="w-full space-y-3 max-w-xs mx-auto">
+                    {/* Name */}
+                    <div className="text-left">
+                      <input 
+                        type="text" 
+                        name="name" 
+                        placeholder="Full Name" 
+                        value={formData.name}
+                        className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${fieldErrors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                        onChange={handleInputChange} 
+                        required
+                      />
+                      {fieldErrors.name && <p className="text-red-400 text-xs mt-1 pl-1">{fieldErrors.name}</p>}
+                    </div>
+
+                    {/* Email */}
+                    <div className="text-left">
+                      <input 
+                        type="email" 
+                        name="email" 
+                        placeholder="Email" 
+                        value={formData.email}
+                        className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${fieldErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                        onChange={handleInputChange} 
+                        required
+                      />
+                      {fieldErrors.email && <p className="text-red-400 text-xs mt-1 pl-1">{fieldErrors.email}</p>}
+                    </div>
+
+                    {/* Password */}
+                    <div className="text-left">
+                      <input 
+                        type="password" 
+                        name="password" 
+                        placeholder="Password" 
+                        value={formData.password}
+                        className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${hasPwErrors ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                        onChange={handleInputChange} 
+                        required
+                      />
+                      {hasPwErrors && (
+                        <ul className="mt-1 pl-1 space-y-0.5">
+                          {Object.values(pwErrors).map((msg) => (
+                            <li key={msg} className="text-red-400 text-xs flex items-center gap-1">
+                              <span>•</span> {msg}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="text-left">
+                      <input 
+                        type="password" 
+                        name="confirmPassword" 
+                        placeholder="Confirm Password" 
+                        value={formData.confirmPassword}
+                        className={`w-full bg-slate-900/50 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition ${fieldErrors.confirmPassword ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-indigo-500 focus:ring-indigo-500'}`}
+                        onChange={handleInputChange} 
+                        required
+                      />
+                      {fieldErrors.confirmPassword && <p className="text-red-400 text-xs mt-1 pl-1">{fieldErrors.confirmPassword}</p>}
+                    </div>
+                  </div>
+
+                  {error && <p role="alert" className="text-red-400 text-sm mt-3 text-center">{error}</p>}
+
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="mt-6 w-full max-w-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 rounded-lg shadow-lg shadow-indigo-500/30 transition-all transform hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {loading ? <span className="inline-block animate-spin mr-2">⟳</span> : null}
+                    {loading ? 'Creating...' : 'Sign Up'}
+                  </button>
+
+                  <button 
+                    type="button" 
+                    onClick={handleGoogleAuth} 
+                    disabled={loading}
+                    className="mt-3 w-full max-w-xs bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium py-3 rounded-lg transition flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                    Sign Up with Google
+                  </button>
+                </form>
+              ) : (
+                /* Mobile Sign In Form */
+                <form onSubmit={handleSubmit} noValidate className="flex flex-col items-center text-center">
+                  <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+                  <p className="text-slate-400 text-sm mb-8">Sign in to continue to your account</p>
+                  
+                  <div className="w-full space-y-4 max-w-xs mx-auto">
+                    <input 
+                      type="email" 
+                      name="email" 
+                      placeholder="Email" 
+                      value={formData.email}
+                      className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                      onChange={handleInputChange} 
+                      required
+                    />
+                    <input 
+                      type="password" 
+                      name="password" 
+                      placeholder="Password" 
+                      value={formData.password}
+                      className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                      onChange={handleInputChange} 
+                      required
+                    />
+                  </div>
+
+                  <div className="w-full flex justify-end max-w-xs mx-auto mt-2">
+                    <a href="#" className="text-xs text-indigo-400 hover:text-indigo-300 transition">Forgot Password?</a>
+                  </div>
+
+                  {error && <p role="alert" className="text-red-400 text-sm mt-3 text-center">{error}</p>}
+
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="mt-6 w-full max-w-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 rounded-lg shadow-lg shadow-indigo-500/30 transition-all transform hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {loading ? <span className="inline-block animate-spin mr-2">⟳</span> : null}
+                    {loading ? 'Signing in...' : 'Sign In'}
+                  </button>
+
+                  <button 
+                    type="button" 
+                    onClick={handleGoogleAuth} 
+                    disabled={loading}
+                    className="mt-4 w-full max-w-xs bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-slate-200 font-medium py-3 rounded-lg transition flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                    Sign In with Google
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
       
       <style>{`
