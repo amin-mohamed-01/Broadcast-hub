@@ -104,7 +104,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 to-black flex items-center justify-center p-4 md:p-6 font-sans">
+    <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-slate-950 to-black flex items-center justify-center p-4 sm:p-6 lg:p-8 font-sans">
       {/* Dynamic card - full-width & optimized on mobile, compact on tablet/desktop */}
       <div 
         className={`bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl transition-all duration-300 ${

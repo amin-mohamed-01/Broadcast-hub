@@ -50,6 +50,25 @@ function IntroAnimation({ onFinish }: { onFinish: () => void }) {
   const [taglineVisible, setTaglineVisible] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
 
+  /* ── Responsive icon size: 76px (phone) → 112px (laptop) → 160px (TV) ── */
+  const [iconSize, setIconSize] = useState(112);
+
+  useEffect(() => {
+    const compute = () => {
+      const vmin = Math.min(window.innerWidth, window.innerHeight);
+      // 0.15 × vmin: ~56px@375 → clamped up to 76, ~115px@768, 160px cap for large
+      const size = Math.max(76, Math.min(160, Math.round(vmin * 0.15)));
+      setIconSize(size);
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, []);
+
+  // Scale factor + proportional ring scaler
+  const s = iconSize / 112;
+  const rp = (base: number) => Math.round(base * s);
+
   /* ── Canvas: background particles + floating hexagons ── */
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -121,11 +140,12 @@ function IntroAnimation({ onFinish }: { onFinish: () => void }) {
         }
       }
 
-      // floating hexagons
+      // floating hexagons — size scales with viewport
+      const hexSzBase = Math.max(12, Math.min(28, Math.min(W, H) * 0.025));
       hexPos.forEach(({ ox, oy }, h) => {
         const hx = W / 2 + ox * W + Math.sin(t * 0.4 + h) * 18;
         const hy = H / 2 + oy * H + Math.cos(t * 0.35 + h) * 14;
-        const sz = 16 + Math.sin(t * 0.9 + h * 1.4) * 5;
+        const sz = hexSzBase + Math.sin(t * 0.9 + h * 1.4) * (hexSzBase * 0.3);
         ctx.save();
         ctx.translate(hx, hy);
         ctx.rotate(t * 0.2 + h * 0.7);
@@ -167,16 +187,15 @@ function IntroAnimation({ onFinish }: { onFinish: () => void }) {
   }, [onFinish]);
 
   /*
-   * LOGO POSITION LOGIC
-   * Natural flex layout centers the whole column (icon + text + tagline ≈ 360px tall).
-   * Icon center sits ~130px above screen center.
-   * To start icon AT screen center → push it down by ~130px (translateY(+130px)).
-   * Then animate to translateY(0) as it rises.
+   * LOGO POSITION LOGIC — fully responsive
+   * Icon center sits above screen-center by ≈ (column_height - icon_height) / 2.
+   * Approximated as 130 × scale-factor so it adjusts on all screen sizes.
    */
+  const startY = Math.round(130 * s);
+
   const logoTransform = (() => {
-    if (phase === 'hidden') return 'translateY(130px) scale(0.4)';
-    if (phase === 'appearing') return 'translateY(130px) scale(1)';
-    // rising + settled
+    if (phase === 'hidden') return `translateY(${startY}px) scale(0.4)`;
+    if (phase === 'appearing') return `translateY(${startY}px) scale(1)`;
     return 'translateY(0px) scale(1)';
   })();
 
@@ -185,6 +204,11 @@ function IntroAnimation({ onFinish }: { onFinish: () => void }) {
     if (phase === 'rising') return 'transform 0.75s cubic-bezier(0.4,0,0.2,1)';
     return 'none';
   })();
+
+  // Derived sizes
+  const dotSize  = Math.max(4, Math.round(6 * s));
+  const dividerW = Math.round(200 * Math.max(0.7, s));
+  const clampS   = Math.max(0.7, s); // flooring for tiny-screen spacing
 
   return (
     <div
@@ -203,11 +227,11 @@ function IntroAnimation({ onFinish }: { onFinish: () => void }) {
             transform: logoTransform,
             transition: logoTransition,
             position: 'relative',
-            width: 112,
-            height: 112,
+            width: iconSize,
+            height: iconSize,
           }}
         >
-          {/* ── CSS rings — only visible after landing ── */}
+          {/* ── CSS rings — all sizes scale proportionally with iconSize ── */}
           <div style={{
             position: 'absolute', inset: 0,
             opacity: showEffects ? 1 : 0,
@@ -215,69 +239,76 @@ function IntroAnimation({ onFinish }: { onFinish: () => void }) {
           }}>
             {/* ping burst on landing */}
             <div className="absolute rounded-full border-2 border-blue-400/50"
-              style={{ inset: -10, animation: showEffects ? 'ringBurst 0.7s ease-out forwards' : 'none' }} />
+              style={{ inset: -rp(10), animation: showEffects ? 'ringBurst 0.7s ease-out forwards' : 'none' }} />
 
             {/* tight pulse ring */}
             <div className="absolute rounded-full border border-blue-500/40 animate-ping"
-              style={{ inset: -14, animationDuration: '2.2s' }} />
+              style={{ inset: -rp(14), animationDuration: '2.2s' }} />
 
             {/* ring 2 — clockwise dashed */}
             <div className="absolute rounded-full"
-              style={{ inset: -40, border: '1px dashed rgba(99,130,246,0.42)', animation: 'spinCW 8s linear infinite' }} />
+              style={{ inset: -rp(40), border: '1px dashed rgba(99,130,246,0.42)', animation: 'spinCW 8s linear infinite' }} />
 
             {/* ring 3 — counter-clockwise */}
             <div className="absolute rounded-full"
-              style={{ inset: -66, border: '1px dashed rgba(139,92,246,0.28)', animation: 'spinCCW 13s linear infinite' }} />
+              style={{ inset: -rp(66), border: '1px dashed rgba(139,92,246,0.28)', animation: 'spinCCW 13s linear infinite' }} />
 
             {/* ring 4 — outermost solid, very slow */}
             <div className="absolute rounded-full"
-              style={{ inset: -94, border: '1px solid rgba(34,211,238,0.15)', animation: 'spinCW 22s linear infinite' }} />
+              style={{ inset: -rp(94), border: '1px solid rgba(34,211,238,0.15)', animation: 'spinCW 22s linear infinite' }} />
 
             {/* glow blob */}
             <div className="absolute rounded-full"
               style={{
-                inset: -44,
+                inset: -rp(44),
                 background: 'radial-gradient(circle, rgba(59,130,246,0.22) 0%, rgba(139,92,246,0.09) 55%, transparent 75%)',
                 animation: 'pulse 2.5s ease-in-out infinite',
               }} />
 
-            {/* orbiting dots on ring 2 */}
+            {/* orbiting dots on ring 2 — radius scales with icon */}
             {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
               <div key={i} style={{
                 position: 'absolute',
                 top: '50%', left: '50%',
-                width: 6, height: 6,
+                width: dotSize, height: dotSize,
                 borderRadius: '50%',
                 background: 'rgba(96,165,250,0.85)',
-                transform: `rotate(${i * 45}deg) translateX(40px) translateY(-50%)`,
+                transform: `rotate(${i * 45}deg) translateX(${rp(40)}px) translateY(-50%)`,
                 animation: 'spinCW 8s linear infinite',
                 transformOrigin: '0 0',
               }} />
             ))}
           </div>
 
-          {/* The actual icon */}
-          <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-blue-600/30 to-purple-700/20 border border-blue-500/40 flex items-center justify-center backdrop-blur-sm shadow-2xl shadow-blue-500/30">
-            <Radio className="w-14 h-14 text-blue-400" strokeWidth={1.5} />
+          {/* The actual icon — dimensions driven by iconSize state */}
+          <div
+            className="relative rounded-full bg-gradient-to-br from-blue-600/30 to-purple-700/20 border border-blue-500/40 flex items-center justify-center backdrop-blur-sm shadow-2xl shadow-blue-500/30"
+            style={{ width: iconSize, height: iconSize }}
+          >
+            <Radio
+              style={{ width: Math.round(iconSize * 0.5), height: Math.round(iconSize * 0.5) }}
+              className="text-blue-400" strokeWidth={1.5}
+            />
           </div>
         </div>
 
         {/* ── Brand text — appears after logo settles ── */}
         <div style={{
-          marginTop: 56, /* clears outermost ring (94px radius) + breathing room */
+          marginTop: rp(94) + Math.round(18 * clampS), /* clears outermost ring + breathing room */
           opacity: textVisible ? 1 : 0,
-          transform: textVisible ? 'translateY(0)' : 'translateY(18px)',
+          transform: textVisible ? 'translateY(0)' : `translateY(${Math.round(18 * clampS)}px)`,
           transition: 'opacity 0.9s ease, transform 0.9s ease',
           textAlign: 'center',
+          padding: '0 12px',
         }}>
           <h1
             className="font-black text-transparent"
             style={{
-              fontSize: 'clamp(2.4rem, 6vw, 4.5rem)',
+              fontSize: 'clamp(1.3rem, 5vw, 4.5rem)',
               backgroundImage: 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 45%, #34d399 100%)',
               WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
-              letterSpacing: '0.18em',
+              letterSpacing: '0.15em',
             }}
           >
             BROADCAST HUB
@@ -286,25 +317,26 @@ function IntroAnimation({ onFinish }: { onFinish: () => void }) {
 
         {/* ── Tagline ── */}
         <div style={{
-          marginTop: 20,
+          marginTop: Math.round(20 * clampS),
           opacity: taglineVisible ? 1 : 0,
           transform: taglineVisible ? 'translateY(0)' : 'translateY(12px)',
           transition: 'opacity 0.9s ease, transform 0.9s ease',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: Math.round(10 * clampS),
+          padding: '0 12px',
         }}>
-          <div style={{ height: 1, width: 200, background: 'linear-gradient(90deg, transparent, rgba(96,165,250,0.6), transparent)' }} />
-          <p style={{ color: 'rgba(148,163,184,0.85)', fontSize: '0.8rem', letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 300 }}>
+          <div style={{ height: 1, width: dividerW, background: 'linear-gradient(90deg, transparent, rgba(96,165,250,0.6), transparent)' }} />
+          <p style={{ color: 'rgba(148,163,184,0.85)', fontSize: 'clamp(0.6rem, 1.4vw, 0.8rem)', letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 300 }}>
             All‑in‑one Digital Solutions
           </p>
-          <div style={{ height: 1, width: 200, background: 'linear-gradient(90deg, transparent, rgba(167,139,250,0.6), transparent)' }} />
+          <div style={{ height: 1, width: dividerW, background: 'linear-gradient(90deg, transparent, rgba(167,139,250,0.6), transparent)' }} />
         </div>
 
         {/* loading dots */}
         {taglineVisible && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+          <div style={{ display: 'flex', gap: Math.round(8 * clampS), marginTop: Math.round(20 * clampS) }}>
             {[0, 1, 2].map(i => (
               <div key={i} style={{
-                width: 6, height: 6, borderRadius: '50%',
+                width: dotSize, height: dotSize, borderRadius: '50%',
                 background: 'rgba(96,165,250,0.8)',
                 animation: 'bounceDot 1.2s infinite',
                 animationDelay: `${i * 0.2}s`,
@@ -605,10 +637,10 @@ export default function MainPage() {
 
       {/* MESSAGE MODAL */}
       {isMessageOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsMessageOpen(false)}></div>
 
-          <div className="relative bg-[#0F172A] w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="relative bg-[#0F172A] w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[85vh]">
             <div className="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800/50">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400">
@@ -706,19 +738,19 @@ export default function MainPage() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0B1120]/90 backdrop-blur-md border-b border-slate-800 shadow-sm">
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
             <Radio className="w-8 h-8 text-blue-600" />
             <h1 className="text-xl font-bold text-white">Broadcast Hub</h1>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#home" className="flex items-center gap-2 text-slate-300 hover:text-blue-400 transition font-medium"><Home size={18} /> Home</a>
-            <a href="#services" className="flex items-center gap-2 text-slate-300 hover:text-blue-400 transition font-medium"><Cog size={18} /> Services</a>
-            <a href="#portfolio" className="flex items-center gap-2 text-slate-300 hover:text-blue-400 transition font-medium"><Briefcase size={18} /> Portfolio</a>
-            <a href="#packages" className="flex items-center gap-2 text-slate-300 hover:text-blue-400 transition font-medium"><Tag size={18} /> Packages</a>
-            <a href="#about" className="flex items-center gap-2 text-slate-300 hover:text-blue-400 transition font-medium"><Users size={18} /> About</a>
-            <a href="#contact" className="flex items-center gap-2 text-slate-300 hover:text-blue-400 transition font-medium"><Phone size={18} /> Contact</a>
+          <nav className="hidden md:flex items-center gap-4 lg:gap-6 xl:gap-8">
+            <a href="#home" className="flex items-center gap-1.5 text-slate-300 hover:text-blue-400 transition font-medium text-sm lg:text-base"><Home size={16} /> Home</a>
+            <a href="#services" className="flex items-center gap-1.5 text-slate-300 hover:text-blue-400 transition font-medium text-sm lg:text-base"><Cog size={16} /> Services</a>
+            <a href="#portfolio" className="flex items-center gap-1.5 text-slate-300 hover:text-blue-400 transition font-medium text-sm lg:text-base"><Briefcase size={16} /> Portfolio</a>
+            <a href="#packages" className="flex items-center gap-1.5 text-slate-300 hover:text-blue-400 transition font-medium text-sm lg:text-base"><Tag size={16} /> Packages</a>
+            <a href="#about" className="flex items-center gap-1.5 text-slate-300 hover:text-blue-400 transition font-medium text-sm lg:text-base"><Users size={16} /> About</a>
+            <a href="#contact" className="flex items-center gap-1.5 text-slate-300 hover:text-blue-400 transition font-medium text-sm lg:text-base"><Phone size={16} /> Contact</a>
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
@@ -779,22 +811,22 @@ export default function MainPage() {
         </div>
 
         {isMenuOpen && (
-          <div className="md:hidden absolute top-20 left-0 w-full bg-[#0B1120] border-b border-slate-800 shadow-xl p-6 flex flex-col gap-4 animate-in slide-in-from-top-5">
-            <a href="#home" className="flex items-center gap-3 p-2 hover:bg-slate-800 rounded-lg text-slate-200"><Home size={20} /> Home</a>
-            <a href="#services" className="flex items-center gap-3 p-2 hover:bg-slate-800 rounded-lg text-slate-200"><Cog size={20} /> Services</a>
-            <a href="#portfolio" className="flex items-center gap-3 p-2 hover:bg-slate-800 rounded-lg text-slate-200"><Briefcase size={20} /> Portfolio</a>
-            <a href="#contact" className="flex items-center gap-3 p-2 hover:bg-slate-800 rounded-lg text-slate-200"><Phone size={20} /> Contact</a>
+          <div className="md:hidden absolute top-16 sm:top-20 left-0 w-full bg-[#0B1120] border-b border-slate-800 shadow-xl p-5 flex flex-col gap-3 animate-in slide-in-from-top-5">
+            <a href="#home" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 p-2.5 hover:bg-slate-800 rounded-lg text-slate-200"><Home size={20} /> Home</a>
+            <a href="#services" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 p-2.5 hover:bg-slate-800 rounded-lg text-slate-200"><Cog size={20} /> Services</a>
+            <a href="#portfolio" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 p-2.5 hover:bg-slate-800 rounded-lg text-slate-200"><Briefcase size={20} /> Portfolio</a>
+            <a href="#contact" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 p-2.5 hover:bg-slate-800 rounded-lg text-slate-200"><Phone size={20} /> Contact</a>
             {user ? (
-              <div className="mt-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700 flex flex-col gap-2">
+              <div className="mt-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700 flex flex-col gap-2">
                 <div className="flex justify-between items-center">
-                  <div><span className="text-xs text-slate-400 block">Logged in</span><span className="text-sm font-semibold text-white truncate block max-w-[180px]">{user?.email}</span></div>
+                  <div><span className="text-xs text-slate-400 block">Logged in</span><span className="text-sm font-semibold text-white truncate block max-w-[200px]">{user?.email}</span></div>
                   <button onClick={handleLogout} className="text-red-500 p-2"><LogOut size={18} /></button>
                 </div>
                 <button onClick={handleEditProfile} className="w-full flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 mt-1"><Edit3 size={14} /> Edit Profile</button>
               </div>
             ) : (
               <button
-                onClick={() => router.push('/auth/sign')}
+                onClick={() => { setIsMenuOpen(false); router.push('/auth/sign'); }}
                 className="mt-2 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl transition"
               >
                 <LogIn size={18} /> Sign In
@@ -805,41 +837,46 @@ export default function MainPage() {
       </header>
 
       <main>
-        {/* Hero */}
-        <section id="home" className="relative py-24 lg:py-32 overflow-hidden">
+        <section id="home" className="relative py-16 sm:py-24 lg:py-32 xl:py-40 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-950 to-black -z-10"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 translate-y-1/2 -translate-x-1/2"></div>
-          <div className="container mx-auto px-6 text-center text-white">
-            <span className="inline-block py-1 px-3 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-sm font-semibold mb-6 backdrop-blur-sm">All-in-one Digital Solutions</span>
-            <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">Crafting Your Complete Digital Presence, <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">From Audio to Visuals!</span></h2>
-            <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-2xl mx-auto leading-relaxed">Podcasts, campaigns, websites, operating systems, graphics, and everything your company needs—all in one place.</p>
+          <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 translate-y-1/2 -translate-x-1/2"></div>
+          <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 text-center text-white">
+            <span className="inline-block py-1 px-3 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs sm:text-sm font-semibold mb-5 sm:mb-6 backdrop-blur-sm">All-in-one Digital Solutions</span>
+            <h2 style={{ fontSize: 'clamp(1.75rem, 5vw, 4rem)' }} className="font-bold mb-5 sm:mb-6 leading-tight">
+              Crafting Your Complete Digital Presence,{' '}
+              <br className="hidden sm:block" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">From Audio to Visuals!</span>
+            </h2>
+            <p style={{ fontSize: 'clamp(0.95rem, 2vw, 1.25rem)' }} className="text-slate-300 mb-8 sm:mb-10 max-w-2xl xl:max-w-3xl mx-auto leading-relaxed">
+              Podcasts, campaigns, websites, operating systems, graphics, and everything your company needs—all in one place.
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-slate-800 text-white hover:bg-slate-700 px-8 py-4 rounded-xl font-bold transition border border-slate-700 flex items-center justify-center gap-2">View Our Work <Briefcase size={18} /></button>
-              <button className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl font-bold transition shadow-lg shadow-blue-600/30 border border-blue-500">Get a Quote</button>
+              <button className="bg-slate-800 text-white hover:bg-slate-700 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold transition border border-slate-700 flex items-center justify-center gap-2">View Our Work <Briefcase size={18} /></button>
+              <button className="bg-blue-600 hover:bg-blue-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold transition shadow-lg shadow-blue-600/30 border border-blue-500">Get a Quote</button>
             </div>
           </div>
         </section>
 
         {/* Services */}
-        <section id="services" className="py-20 bg-[#0F172A]">
+        <section id="services" className="py-14 sm:py-20 bg-[#0F172A]">
           <Reveal>
-            <div className="container mx-auto px-6">
-              <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 flex items-center justify-center gap-4">
+            <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16">
+              <div className="text-center mb-10 sm:mb-16">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 flex flex-wrap items-center justify-center gap-3">
                   Our Services
-                  <span className="text-sm font-semibold bg-amber-500 text-black px-5 py-1.5 rounded-3xl shadow-inner">Coming Soon</span>
+                  <span className="text-xs sm:text-sm font-semibold bg-amber-500 text-black px-4 py-1.5 rounded-3xl shadow-inner">Coming Soon</span>
                 </h2>
                 <div className="w-20 h-1 bg-blue-600 mx-auto rounded-full"></div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {services.map((service, index) => {
                   const Icon = service.icon;
                   return (
-                    <div key={index} onClick={() => service.link && router.push(service.link)} className="group bg-slate-800/50 p-8 rounded-2xl shadow-sm hover:shadow-xl border border-slate-700 hover:border-blue-500/50 transition-all duration-300 cursor-pointer flex flex-col items-center text-center">
-                      <div className="w-14 h-14 bg-blue-900/30 text-blue-400 rounded-full flex items-center justify-center mb-6 group-hover:bg-blue-500 group-hover:text-white transition-colors"><Icon size={28} /></div>
-                      <h3 className="text-xl font-bold text-white mb-3">{service.title}</h3>
-                      <p className="text-slate-400 leading-relaxed">{service.desc}</p>
+                    <div key={index} onClick={() => service.link && router.push(service.link)} className="group bg-slate-800/50 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-xl border border-slate-700 hover:border-blue-500/50 transition-all duration-300 cursor-pointer flex flex-col items-center text-center">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-900/30 text-blue-400 rounded-full flex items-center justify-center mb-4 sm:mb-6 group-hover:bg-blue-500 group-hover:text-white transition-colors"><Icon size={26} /></div>
+                      <h3 className="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-3">{service.title}</h3>
+                      <p className="text-slate-400 leading-relaxed text-sm sm:text-base">{service.desc}</p>
                     </div>
                   );
                 })}
@@ -849,17 +886,17 @@ export default function MainPage() {
         </section>
 
         {/* Portfolio */}
-        <section id="portfolio" className="py-20 bg-[#0B1120]">
+        <section id="portfolio" className="py-14 sm:py-20 bg-[#0B1120]">
           <Reveal>
-            <div className="container mx-auto px-6">
-              <div className="flex justify-between items-end mb-12">
+            <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16">
+              <div className="flex flex-wrap justify-between items-end mb-8 sm:mb-12 gap-3">
                 <div>
-                  <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Latest Works</h2>
-                  <p className="text-slate-400">Coming Soon – Our recent projects will be showcased here soon!</p>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">Latest Works</h2>
+                  <p className="text-slate-400 text-sm sm:text-base">Coming Soon – Our recent projects will be showcased here soon!</p>
                 </div>
-                <button className="hidden md:block text-blue-400 font-semibold hover:underline">View All</button>
+                <button className="text-blue-400 font-semibold hover:underline text-sm sm:text-base">View All</button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {[
                   { title: "Podcast", icon: Mic, desc: "Professional audio production" },
                   { title: "Campaign", icon: Megaphone, desc: "Impactful ad campaigns" },
@@ -868,14 +905,14 @@ export default function MainPage() {
                 ].map((item, i) => {
                   const Icon = item.icon;
                   return (
-                    <div key={i} className="group bg-slate-800/50 p-8 rounded-2xl shadow-sm hover:shadow-xl border border-slate-700 hover:border-blue-500/50 transition-all duration-300 flex flex-col items-center text-center relative">
-                      <div className="w-14 h-14 bg-blue-900/30 text-blue-400 rounded-full flex items-center justify-center mb-6 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                        <Icon size={28} />
+                    <div key={i} className="group bg-slate-800/50 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-xl border border-slate-700 hover:border-blue-500/50 transition-all duration-300 flex flex-col items-center text-center relative">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-900/30 text-blue-400 rounded-full flex items-center justify-center mb-4 sm:mb-6 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                        <Icon size={26} />
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-3">{item.title}</h3>
+                      <h3 className="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-3">{item.title}</h3>
                       <p className="text-slate-400 leading-relaxed text-sm">{item.desc}</p>
                       {/* Coming soon badge */}
-                      <div className="absolute top-6 right-6 px-3 py-1 text-[10px] font-bold bg-amber-500 text-black rounded-3xl shadow-inner">
+                      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 px-2.5 py-1 text-[10px] font-bold bg-amber-500 text-black rounded-3xl shadow-inner">
                         Coming Soon
                       </div>
                     </div>
@@ -887,15 +924,15 @@ export default function MainPage() {
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="py-20 bg-[#0F172A]">
+        <section id="faq" className="py-14 sm:py-20 bg-[#0F172A]">
           <Reveal>
-            <div className="container mx-auto px-6 max-w-3xl">
-              <h2 className="text-3xl font-bold text-center text-white mb-10">Frequently Asked Questions</h2>
-              <div className="space-y-4">
+            <div className="w-full max-w-[860px] mx-auto px-4 sm:px-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-8 sm:mb-10">Frequently Asked Questions</h2>
+              <div className="space-y-3 sm:space-y-4">
                 {faqs.map((faq) => (
                   <div key={faq.id} className="bg-slate-800/50 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
-                    <button onClick={() => toggleFaq(faq.id)} className="w-full flex justify-between items-center p-6 text-left focus:outline-none"><h3 className="text-lg font-semibold text-slate-100">{faq.q}</h3><ChevronDown className={`w-5 h-5 text-slate-300 transition-transform duration-300 ${activeFaq === faq.id ? 'rotate-180' : ''}`} /></button>
-                    <div className={`px-6 overflow-hidden transition-all duration-300 ease-in-out ${activeFaq === faq.id ? 'max-h-40 pb-6' : 'max-h-0'}`}><p className="text-slate-300">{faq.a}</p></div>
+                    <button onClick={() => toggleFaq(faq.id)} className="w-full flex justify-between items-center p-4 sm:p-6 text-left focus:outline-none gap-3"><h3 className="text-base sm:text-lg font-semibold text-slate-100">{faq.q}</h3><ChevronDown className={`w-5 h-5 text-slate-300 flex-shrink-0 transition-transform duration-300 ${activeFaq === faq.id ? 'rotate-180' : ''}`} /></button>
+                    <div className={`px-4 sm:px-6 overflow-hidden transition-all duration-300 ease-in-out ${activeFaq === faq.id ? 'max-h-40 pb-5 sm:pb-6' : 'max-h-0'}`}><p className="text-slate-300 text-sm sm:text-base">{faq.a}</p></div>
                   </div>
                 ))}
               </div>
@@ -904,41 +941,41 @@ export default function MainPage() {
         </section>
 
         {/* Info */}
-        <section id="info" className="py-12 bg-blue-950 text-white">
+        <section id="info" className="py-8 sm:py-12 bg-blue-950 text-white">
           <Reveal>
-            <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="text-center md:text-left"><h3 className="text-xl font-bold mb-1">Working Hours & Support</h3><p className="text-blue-200">We reply within 24 hours</p></div>
-              <div className="text-center md:text-right"><p className="font-semibold"><i className="far fa-clock mr-2"></i>Sun - Thu: 10:00 AM - 6:00 PM</p></div>
+            <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6 text-center sm:text-left">
+              <div><h3 className="text-lg sm:text-xl font-bold mb-1">Working Hours & Support</h3><p className="text-blue-200 text-sm sm:text-base">We reply within 24 hours</p></div>
+              <div><p className="font-semibold text-sm sm:text-base">Sun - Thu: 10:00 AM - 6:00 PM</p></div>
             </div>
           </Reveal>
         </section>
 
         {/* Footer */}
-        <footer id="contact" className="bg-black text-slate-300 pt-20 pb-10">
+        <footer id="contact" className="bg-black text-slate-300 pt-12 sm:pt-20 pb-8 sm:pb-10">
           <Reveal>
-            <div className="container mx-auto px-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
+            <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 mb-12 sm:mb-16">
                 <div>
-                  <h2 className="text-3xl font-bold text-white mb-6">Contact Us</h2>
-                  <p className="mb-8 text-slate-400 leading-relaxed">Have an idea? Send it to us and we will get back to you.</p>
-                  <div className="flex gap-4 mb-8">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 sm:mb-6">Contact Us</h2>
+                  <p className="mb-6 sm:mb-8 text-slate-400 leading-relaxed text-sm sm:text-base">Have an idea? Send it to us and we will get back to you.</p>
+                  <div className="flex gap-3 sm:gap-4 mb-6 sm:mb-8">
                     {['whatsapp', 'linkedin', 'instagram', 'facebook'].map((social) => (
-                      <a key={social} href="#" className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white hover:border-blue-600 transition"><span className="capitalize text-xs font-bold">{social[0].toUpperCase()}</span></a>
+                      <a key={social} href="#" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white hover:border-blue-600 transition"><span className="capitalize text-xs font-bold">{social[0].toUpperCase()}</span></a>
                     ))}
                   </div>
                 </div>
-                <div className="bg-slate-900/50 p-8 rounded-2xl border border-slate-800 flex flex-col items-center justify-center gap-4 min-h-[200px]">
-                  <p className="text-slate-400 text-center">Want to send us a message?</p>
+                <div className="bg-slate-900/50 p-6 sm:p-8 rounded-2xl border border-slate-800 flex flex-col items-center justify-center gap-4 min-h-[180px] sm:min-h-[200px]">
+                  <p className="text-slate-400 text-center text-sm sm:text-base">Want to send us a message?</p>
                   <button
                     type="button"
                     onClick={() => setIsMessageOpen(true)}
-                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg transition flex items-center justify-center gap-2"
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 sm:px-8 rounded-lg transition flex items-center justify-center gap-2 text-sm sm:text-base"
                   >
                     Open Chat <MessageSquare size={18} />
                   </button>
                 </div>
               </div>
-              <div className="border-t border-slate-900 pt-8 text-center text-sm text-slate-500">&copy; {new Date().getFullYear()} Broadcast Hub. All rights reserved.</div>
+              <div className="border-t border-slate-900 pt-6 sm:pt-8 text-center text-xs sm:text-sm text-slate-500">&copy; {new Date().getFullYear()} Broadcast Hub. All rights reserved.</div>
             </div>
           </Reveal>
         </footer>

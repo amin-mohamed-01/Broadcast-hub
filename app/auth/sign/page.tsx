@@ -199,7 +199,7 @@ export default function AuthPage() {
   const hasPwErrors = Object.keys(pwErrors).length > 0;
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-slate-950 overflow-hidden font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="relative min-h-screen min-h-[100dvh] flex items-center justify-center bg-slate-950 overflow-hidden font-sans selection:bg-indigo-500 selection:text-white py-8">
       
       {/* Background */}
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
@@ -216,7 +216,7 @@ export default function AuthPage() {
       )}
 
       {/* Main Card - Fully responsive */}
-      <div className={`relative bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden w-full max-w-[95%] md:max-w-[850px] min-h-[520px] md:min-h-[600px] transition-all duration-700 ease-in-out z-10`}>
+      <div className={`relative bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden w-full max-w-[95%] md:max-w-[850px] lg:max-w-[900px] min-h-[480px] md:min-h-[560px] transition-all duration-700 ease-in-out z-10`}>
         
         {/* ── DESKTOP / TABLET LAYOUT (original sliding panels) ── */}
         {isDesktop ? (
